@@ -1,15 +1,15 @@
 ---
-name: daily-brief
-description: 朝の業務開始時に Slack（自分宛メンション・DM）と Jira（担当・期限・ウォッチ）を集約し、今日やるべきことをサマリして自分宛 Slack DM に送る。「今日やること」「朝のサマリ」「デイリーブリーフ」「/daily-brief」で起動する。
+name: daily-todo
+description: 朝の業務開始時に Slack（自分宛メンション・DM）と Jira（担当・期限・ウォッチ）を集約し、今日やるべきことをサマリして自分宛 Slack DM に送る。「今日やること」「朝のサマリ」「デイリーTODO」「/daily-todo」で起動する。
 ---
 
-# daily-brief
+# daily-todo
 
 Slack と Jira から「今日自分がやるべきこと」を抽出し、自分宛 Slack DM に送る。
 
 ## 0. 設定読み込み
 
-1. `~/.claude/skills/daily-brief/config.md` を読む。存在しなければ同じディレクトリの `config.example.md` をコピーして作る。個人の ID をリポジトリに含めないため、`config.md` は git 管理外にしている。
+1. `~/.claude/skills/daily-todo/config.md` を読む。存在しなければ同じディレクトリの `config.example.md` をコピーして作る。個人の ID をリポジトリに含めないため、`config.md` は git 管理外にしている。
 2. `SLACK_USER_ID` または `SLACK_SELF_DM_ID` が空なら初回セットアップを行う。
    - `mcp__slack__users_search` で自分を検索し（ユーザーに表示名を聞く）、ユーザー ID と DM チャンネル ID を取得する。
    - 取得値を `config.md` に書き込む。
@@ -20,7 +20,7 @@ Slack と Jira から「今日自分がやるべきこと」を抽出し、自�
 ツールはすべて `mcp__slack__*`（ToolSearch で読み込む）。
 
 - **メンション**：`conversations_search_messages` で `<@SLACK_USER_ID>` を起点日以降で検索する。
-- **DM / グループ DM**：`channels_me`（`channel_types: im,mpim`）で一覧を取り、各チャンネルを `conversations_history`（`limit` は起点からの日数）で読む。自分の DM（`SLACK_SELF_DM_ID`）は除外する。過去の daily-brief 投稿を拾わないため。
+- **DM / グループ DM**：`channels_me`（`channel_types: im,mpim`）で一覧を取り、各チャンネルを `conversations_history`（`limit` は起点からの日数）で読む。自分の DM（`SLACK_SELF_DM_ID`）は除外する。過去の daily-todo 投稿を拾わないため。
 - 依頼・質問を含むメッセージは**自分が既に返信済みか**を判定し、返信済みのものは除外する。
   - `conversations_search_messages` で `filter_users_from: SLACK_USER_ID`、起点日以降の自分の投稿を検索する。
   - 同じ `ThreadTs` を持ち、メンションより後の時刻の自分の投稿があれば返信済みとみなす。
@@ -88,4 +88,4 @@ _取得失敗: Slack メンション検索（権限不足）_   ← 失敗時の
 ユーザーから「毎朝自動で」と言われたら、`CronCreate` で以下を登録する（セッション起動中のみ有効）。
 
 - cron: `0 9 * * 1-5`（平日 9:00）
-- prompt: `/daily-brief`
+- prompt: `/daily-todo`

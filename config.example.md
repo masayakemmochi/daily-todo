@@ -1,4 +1,4 @@
-# daily-brief 設定
+# daily-todo 設定
 
 空欄は初回実行時に自動取得して書き込む。
 

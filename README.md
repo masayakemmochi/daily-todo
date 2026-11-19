@@ -1,4 +1,4 @@
-# daily-brief
+# daily-todo
 
 Slack と Jira から「今日自分がやるべきこと」を集約し、自分宛の Slack DM にサマリを送る Claude Code スキル。
 
@@ -13,9 +13,9 @@ Slack と Jira から「今日自分がやるべきこと」を集約し、自�
 ## 導入
 
 ```sh
-git clone https://github.com/masayakemmochi/daily-brief.git
-ln -s "$(pwd)/daily-brief" ~/.claude/skills/daily-brief
-cp daily-brief/config.example.md daily-brief/config.md
+git clone https://github.com/masayakemmochi/daily-todo.git
+ln -s "$(pwd)/daily-todo" ~/.claude/skills/daily-todo
+cp daily-todo/config.example.md daily-todo/config.md
 ```
 
 `config.md` が無い状態で起動した場合も、スキルが `config.example.md` から自動で作る。
@@ -38,8 +38,8 @@ cp daily-brief/config.example.md daily-brief/config.md
 
 Claude Code で次のいずれかを入力する。
 
-- `/daily-brief`
-- 「今日やること」「朝のサマリ」「デイリーブリーフ」
+- `/daily-todo`
+- 「今日やること」「朝のサマリ」「デイリーTODO」
 
 「毎朝自動で」と依頼すると、平日 9:00 に実行する定時ジョブを `CronCreate` で登録する。この登録は Claude Code のセッションが起動している間だけ有効である。
 
