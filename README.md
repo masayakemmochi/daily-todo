@@ -5,7 +5,7 @@ Slack と Jira から「今日自分がやるべきこと」を集約し、自�
 ## 前提
 
 - [Claude Code](https://claude.com/claude-code)
-- Slack MCP サーバー（`mcp__slack__*` のツール群）
+- claude.ai の Slack 連携（`mcp__claude_ai_Slack__*` のツール群）。claude.ai の「設定 > コネクタ」で Slack を接続しておく
 - Atlassian MCP サーバー（`mcp__atlassian__jira_search`）
 
 どちらかが使えない場合も処理は止まらず、サマリ末尾に「取得失敗」として記載される。

@@ -11,22 +11,24 @@ Slack と Jira から「今日自分がやるべきこと」を抽出し、自�
 
 1. `~/.claude/skills/daily-todo/config.md` を読む。存在しなければ同じディレクトリの `config.example.md` をコピーして作る。個人の ID をリポジトリに含めないため、`config.md` は git 管理外にしている。
 2. `SLACK_USER_ID` または `SLACK_SELF_DM_ID` が空なら初回セットアップを行う。
-   - `mcp__slack__users_search` で自分を検索し（ユーザーに表示名を聞く）、ユーザー ID と DM チャンネル ID を取得する。
+   - `mcp__claude_ai_Slack__slack_search_users` の説明文に記載されているログインユーザーの ID を `SLACK_USER_ID` とする。
+   - `mcp__claude_ai_Slack__slack_list_user_channels`（`types: im`）で自分自身との DM を探し、その ID を `SLACK_SELF_DM_ID` とする。見つからなければ `SLACK_USER_ID` を入れる。`slack_send_message` はユーザー ID を指定すると、そのユーザーとの DM に送るため。
    - 取得値を `config.md` に書き込む。
 3. 収集期間の起点を決める。月曜は前週金曜 `WORKDAY_END`、それ以外は前日 `WORKDAY_END`。
 
 ## 1. Slack 収集
 
-ツールはすべて `mcp__slack__*`（ToolSearch で読み込む）。
+ツールはすべて claude.ai の Slack 連携 `mcp__claude_ai_Slack__*`（ToolSearch で読み込む）。自作 Slack アプリ用の `mcp__slack__*` は廃止したため使わない。
 
-- **メンション**：`conversations_search_messages` で `<@SLACK_USER_ID>` を起点日以降で検索する。
-- **DM / グループ DM**：`channels_me`（`channel_types: im,mpim`）で一覧を取り、各チャンネルを `conversations_history`（`limit` は起点からの日数）で読む。自分の DM（`SLACK_SELF_DM_ID`）は除外する。過去の daily-todo 投稿を拾わないため。
+時刻の引数には起点の Unix タイムスタンプ（以下「起点 ts」）を渡す。
+
+- **メンション**：`slack_search_public_and_private` で `keywords: ["<@SLACK_USER_ID>"]`、`after: 起点 ts`、`sort: timestamp` を指定して検索する。1 回 20 件までのため、`cursor` が返る間はページを送る。
+- **DM / グループ DM**：`slack_list_user_channels`（`types: im,mpim`、`exclude_archived: true`）で一覧を取り、各チャンネルを `slack_read_channel`（`oldest: 起点 ts`）で読む。自分の DM（`SLACK_SELF_DM_ID`）は除外する。過去の daily-todo 投稿を拾わないため。
 - 依頼・質問を含むメッセージは**自分が既に返信済みか**を判定し、返信済みのものは除外する。
-  - `conversations_search_messages` で `filter_users_from: SLACK_USER_ID`、起点日以降の自分の投稿を検索する。
-  - 同じ `ThreadTs` を持ち、メンションより後の時刻の自分の投稿があれば返信済みとみなす。
-  - `conversations_replies` は使わない。現在のトークンでは missing_scope になるため。この判定方法は通常手順なので「取得失敗」には書かない。
+  - スレッド内のメッセージは `slack_read_thread` で返信を読み、メンションより後の時刻に自分の投稿があれば返信済みとみなす。
+  - スレッド外のメッセージは、同じチャンネルでメンションより後の時刻に自分の投稿があれば返信済みとみなす。DM は `slack_read_channel` の結果で判定する。
 
-検索ツールが存在しない、または権限エラーになった場合は処理を止めず、サマリ末尾の「取得失敗」に記載する。xoxp 未設定時に Jira だけでも届けるため。
+Slack 連携が未接続、または権限エラーになった場合は処理を止めず、サマリ末尾の「取得失敗」に記載する。Slack が使えないときも Jira の分だけは届けるため。
 
 ## 2. Jira 収集
 
@@ -51,26 +53,30 @@ Slack と Jira から「今日自分がやるべきこと」を抽出し、自�
 
 同じ件が Slack と Jira の両方に出た場合は 1 項目にまとめる。
 
-## 4. サマリ書式（Slack mrkdwn）
+## 4. サマリ書式（標準 Markdown）
+
+`slack_send_message` は標準 Markdown を Slack の書式に変換する。Slack 独自の mrkdwn（`*太字*`、`<URL|text>`）を書くと変換されずに崩れるため、標準 Markdown で書く。
 
 ```
-*📋 {YYYY-MM-DD(曜)} 今日やること*
+**📋 {YYYY-MM-DD(曜)} 今日やること**
 
-*🔴 今日やる（N件）*
-• <URL|KEY-123> 要約（期限: MM/DD）
-• <permalink|#channel @相手> 依頼内容の要約
+**🔴 今日やる（N件）**
+- [KEY-123](URL) 要約（期限: MM/DD）
+- [#channel @相手](permalink) 依頼内容の要約
 
-*🟡 返信・確認待ち（N件）*
-• ...
+**🟡 返信・確認待ち（N件）**
+- ...
 
-*🔵 期限が近い（N件）*
-• ...
+**🔵 期限が近い（N件）**
+- ...
 
-*⚪ 参考（N件）*
-• <URL|KEY-123> 要約（優先度: Medium／期限: MM/DD または なし）
+**⚪ 参考（N件）**
+- [KEY-123](URL) 要約（優先度: Medium／期限: MM/DD または なし）
 
 _取得失敗: Slack メンション検索（権限不足）_   ← 失敗時のみ
 ```
+
+- 1 つのテキスト要素は 5000 字までのため、超える場合は ⚪ 参考を件数のみに省略する。
 
 - 1 項目 1 行。要約は 40 字以内で、何をすべきかを動詞で書く。
 - 各項目に元のリンクを必ず付ける。
@@ -78,7 +84,7 @@ _取得失敗: Slack メンション検索（権限不足）_   ← 失敗時の
 
 ## 5. 送信と表示
 
-1. `mcp__slack__conversations_add_message` で `channel_id = SLACK_SELF_DM_ID` に投稿する。確認は挟まない。
+1. `mcp__claude_ai_Slack__slack_send_message` で `channel_id = SLACK_SELF_DM_ID` に投稿する。確認は挟まない。
    - **送信先は `SLACK_SELF_DM_ID` 以外にしてはならない。** 他者に誤送信しないため。
    - ツールが存在しない場合は送信をスキップし、その旨を端末に表示する。
 2. 同じ内容を端末にも表示する。
